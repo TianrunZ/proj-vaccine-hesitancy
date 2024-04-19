@@ -1,0 +1,140 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-04-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(quanteda)
+library(readr)
+library(readtext)
+library(stm)
+```
+
+
+```{r}
+df <- arrow::read_parquet("covid_sentiment.parquet")
+
+
+df_positive <- df |> dplyr::filter(grepl('Positive', covid_sentiment)) |> select(user_id, text)
+
+df_negative <- df |> dplyr::filter(grepl('Negative', covid_sentiment)) |> select(user_id, text)
+
+df_neutral <- df |> dplyr::filter(grepl('Neutral', covid_sentiment)) |> select(user_id, text)
+
+
+```
+
+```{r}
+length(unique(df$url))
+
+na.omit(df$url) |> length()
+```
+
+
+```{r}
+positive_corps <- corpus(df_positive)
+
+positive_tokens <- tokens(positive_corps, what = "word", remove_punct = T, remove_symbols = T)
+
+positive_tokens <- tokens_tolower(positive_tokens) #Make lower case
+positive_tokens <- tokens_remove(positive_tokens, stopwords("english")) #Remove stop words
+positive_tokens <- tokens_remove(positive_tokens, c("rt"))
+positive_stem <- tokens_wordstem(positive_tokens) #Stem words
+
+```
+
+```{r}
+positive_mat <- dfm(positive_stem)
+```
+
+```{r}
+positive_mat <- dfm_trim(positive_mat, min_docfreq = 0.001, max_docfreq = 0.999, docfreq_type = "prop", verbose = T)
+
+```
+
+
+```{r}
+barplot(topfeatures(positive_mat, 20), las = 2)
+
+```
+
+
+```{r}
+positive_stm_mat <- convert(positive_mat, to = "stm")
+
+```
+
+```{r}
+positive_model <- stm(documents = positive_stm_mat$documents, vocab = positive_stm_mat$vocab, K = 10, verbose = F)
+
+```
+
+```{r}
+plot(positive_model)
+```
+
+# Removing Vaccin stem
+
+```{r}
+pos_novax_stem <- tokens_remove(positive_stem, "vaccin")
+
+positive2_mat <- dfm(pos_novax_stem)
+
+positive2_mat <- dfm_trim(positive2_mat, min_docfreq = 0.001, max_docfreq = 0.999, docfreq_type = "prop", verbose = T)
+
+barplot(topfeatures(positive2_mat, 20), las = 2)
+
+positive2_stm_mat <- convert(positive2_mat, to = "stm")
+
+positive2_model <- stm(documents = positive2_stm_mat$documents, vocab = positive2_stm_mat$vocab, K = 10, verbose = F)
+```
+
+
+```{r}
+plot(positive2_model)
+```
+
+```{r}
+negative_corps <- corpus(df_negative)
+
+negative_tokens <- tokens(negative_corps, what = "word", remove_punct = T, remove_symbols = T)
+
+negative_tokens <- tokens_tolower(negative_tokens) #Make lower case
+negative_tokens <- tokens_remove(negative_tokens, stopwords("english")) #Remove stop words
+negative_tokens <- tokens_remove(negative_tokens, c("rt"))
+negative_stem <- tokens_wordstem(negative_tokens) #Stem words
+
+
+negative_novax_stem <- tokens_remove(negative_stem, "vaccin")
+
+negative2_mat <- dfm(negative_novax_stem)
+
+negative2_mat <- dfm_trim(negative2_mat, min_docfreq = 0.001, max_docfreq = 0.999, docfreq_type = "prop", verbose = T)
+
+barplot(topfeatures(negative2_mat, 20), las = 2)
+
+negative2_stm_mat <- convert(negative2_mat, to = "stm")
+
+negative2_model <- stm(documents = negative2_stm_mat$documents, vocab = negative2_stm_mat$vocab, K = 10, verbose = F)
+
+
+
+```
+
+
+```{r}
+plot(negative2_model)
+```
+
+
+
+
+
+
+
+
+
+
